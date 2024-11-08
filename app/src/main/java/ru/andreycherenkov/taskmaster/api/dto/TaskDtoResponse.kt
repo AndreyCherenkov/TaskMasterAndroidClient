@@ -1,16 +1,18 @@
 package ru.andreycherenkov.taskmaster.api.dto
 
+import com.google.gson.annotations.SerializedName
 import ru.andreycherenkov.taskmaster.db.TaskPriority
 import ru.andreycherenkov.taskmaster.db.TaskStatus
 import java.time.LocalDateTime
 import java.util.UUID
 
 data class TaskDtoResponse(
-    val taskId: UUID,
-    val userId: UUID,
-    val title: String,
-    val description: String,
-    val priority: TaskPriority,
-    val taskStatus: TaskStatus,
-    val dueDate: LocalDateTime
+    @SerializedName("task_id") val taskId: UUID,
+    @SerializedName("user_id") val userId: UUID,
+    @SerializedName("title") val title: String,
+    @SerializedName("description") val description: String,
+    @SerializedName("priority") val priority: TaskPriority,
+    @SerializedName("task_status") val taskStatus: TaskStatus,
+    @SerializedName("start_date") val startDate: String,
+    @SerializedName("due_date") val dueDate: String?
 )

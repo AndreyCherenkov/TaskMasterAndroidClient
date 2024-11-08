@@ -20,6 +20,8 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import retrofit2.Call
@@ -29,6 +31,7 @@ import ru.andreycherenkov.taskmaster.api.dto.TaskDtoCreateRequest
 import ru.andreycherenkov.taskmaster.api.dto.TaskDtoResponse
 import ru.andreycherenkov.taskmaster.db.TaskRepository
 import ru.andreycherenkov.taskmaster.api.dto.TaskItemDto
+import ru.andreycherenkov.taskmaster.db.Task
 import ru.andreycherenkov.taskmaster.db.TaskPriority
 import ru.andreycherenkov.taskmaster.db.TaskStatus
 import java.time.LocalDate
@@ -38,8 +41,8 @@ import java.util.logging.Logger
 
 class MainActivity : AppCompatActivity() {
 
-    private val taskList = mutableListOf<TaskItemDto>()
     private val taskRepository = TaskRepository(this)
+    private lateinit var taskList: MutableList<TaskItemDto>
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var recyclerView: RecyclerView
     private lateinit var navigationView: NavigationView
@@ -83,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        taskList = taskRepository.getAllTasks()
         recyclerView = findViewById(R.id.recycler_view_tasks)
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.nav_view)
@@ -136,12 +140,13 @@ class MainActivity : AppCompatActivity() {
                 val taskStatus = TaskStatus.fromString(taskStatusString)
 
                 val newTask = TaskItemDto(
+                    taskId = null,
                     title = taskName,
                     description = taskDescription,
                     status = taskStatus,
                     priority = taskPriority,
                     startDate = startDate,
-                    endDate = endDate
+                    dueDate = endDate
                 )
 
                 val test = TaskDtoCreateRequest(
@@ -150,14 +155,12 @@ class MainActivity : AppCompatActivity() {
                     description = taskDescription,
                     priority = taskPriority,
                     taskStatus = taskStatus,
-                    dueDate = LocalDate.now()
+                    dueDate = LocalDate.now().toString()
                 )
 
                 Log.d("TaskStatus", "Selected status: '$taskPriority'")
 
                 addTask(test)
-                addTaskToList(newTask)
-
                 alertDialog.dismiss()
             }
         }
@@ -185,37 +188,43 @@ class MainActivity : AppCompatActivity() {
 
     private fun addTask(taskDtoCreateRequest: TaskDtoCreateRequest) {
         if (isNetworkAvailable(this)) {
-            val userApi = RetrofitClient.userApi
-            GlobalScope.launch {
-                println("RESPONSE: ${userApi.test().execute().body()}")
-            }
+            val taskApi = RetrofitClient.taskApi
+            taskApi.createTask(taskDtoCreateRequest).enqueue(object : Callback<TaskDtoResponse> {
+                override fun onResponse(
+                    call: Call<TaskDtoResponse>,
+                    response: Response<TaskDtoResponse>
+                ) {
+                    if (response.isSuccessful) {
+                        val createdTask = response.body()
+                        if (createdTask != null) {
+                            val id = taskRepository.addTask(createdTask)
+                            val taskItem = with(createdTask) {
+                                TaskItemDto(
+                                    taskId = id,
+                                    title = title,
+                                    description = description,
+                                    status = taskStatus,
+                                    priority = priority,
+                                    startDate = startDate,
+                                    dueDate = dueDate.toString()
+                                )
+                            }
+                            addTaskToList(taskItem)
+                        }
+                        Logger.getGlobal().log(Level.INFO, "RESPONSE SUCCESSFUL")
+                    }
+                }
+
+                override fun onFailure(call: Call<TaskDtoResponse>, t: Throwable) {
+                    Logger.getGlobal()
+                        .log(Level.INFO, "RESPONSE FAILED: ${t.message}")
+                }
+            })
+
         } else {
             println("No internet connection available.")
         }
 
-
-        val taskApi = RetrofitClient.taskApi
-//            taskApi.createTask(taskDtoCreateRequest).enqueue(object : Callback<TaskDtoResponse> {
-//                override fun onResponse(
-//                    call: Call<TaskDtoResponse>,
-//                    response: Response<TaskDtoResponse>
-//                ) {
-//                    if (response.isSuccessful) {
-//                        val createdTask = response.body()
-//                        if (createdTask != null) {
-//                            taskRepository.addTask(createdTask)
-//                        }
-//
-//                        Logger.getGlobal().log(Level.INFO, "RESPONSE SUCCESSFUL")
-//                    } else {
-//                        Logger.getGlobal().log(Level.INFO, "RESPONSE FAILED: ${response.body()}")
-//                    }
-//                }
-//
-//                override fun onFailure(call: Call<TaskDtoResponse>, t: Throwable) {
-//                    println("Ошибка: ${t.message}")
-//                }
-//            })
     }
 
     fun isNetworkAvailable(context: Context): Boolean {

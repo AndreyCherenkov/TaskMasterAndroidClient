@@ -7,10 +7,12 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import ru.andreycherenkov.taskmaster.api.dto.TaskDtoResponse
+import ru.andreycherenkov.taskmaster.api.dto.TaskItemDto
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-class TaskRepository(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class TaskRepository(context: Context) :
+    SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "task.db"
@@ -55,17 +57,24 @@ class TaskRepository(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     fun addTask(taskDtoResponse: TaskDtoResponse): Long {
         val db = this.writableDatabase
 
-        val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-        val formattedDueDate = taskDtoResponse.dueDate.format(dateFormatter)
-
         val values = ContentValues().apply {
             put(COLUMN_USER_ID, taskDtoResponse.userId.toString()) // UUID пользователя
             put(COLUMN_TASK_TITLE, taskDtoResponse.title) // Заголовок задачи
             put(COLUMN_TASK_DESCRIPTION, taskDtoResponse.description) // Описание задачи
-            put(COLUMN_TASK_PRIORITY, taskDtoResponse.priority.ordinal) // Приоритет задачи (предполагается, что это enum)
-            put(COLUMN_TASK_STATUS, taskDtoResponse.taskStatus.name) // Статус задачи (предполагается, что это enum)
-            put(COLUMN_TASK_DUE_DATE, formattedDueDate) // Срок выполнения задачи
-            put(COLUMN_TASK_UPDATED_AT, System.currentTimeMillis().toString()) // Время обновления задачи
+            put(
+                COLUMN_TASK_PRIORITY,
+                taskDtoResponse.priority.ordinal
+            ) // Приоритет задачи (предполагается, что это enum)
+            put(
+                COLUMN_TASK_STATUS,
+                taskDtoResponse.taskStatus.name
+            ) // Статус задачи (предполагается, что это enum)
+            put(COLUMN_TASK_DUE_DATE, taskDtoResponse.dueDate?.toString()) // Срок выполнения задачи
+            put(COLUMN_TASK_START_DATE, taskDtoResponse.startDate.toString())
+            put(
+                COLUMN_TASK_UPDATED_AT,
+                System.currentTimeMillis().toString()
+            ) // Время обновления задачи
         }
 
         val id = db.insert(TABLE_TASKS, null, values)
@@ -81,35 +90,56 @@ class TaskRepository(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return db.query(TABLE_TASKS, null, "$COLUMN_TASK_ID=?", arrayOf(id), null, null, null)
     }
 
-    @SuppressLint("Range") //todo пофиксить
-    fun getAllTasks(): List<Map<String, Any?>> {
-        val tasks = mutableListOf<Map<String, Any?>>()
+    @SuppressLint("Range") // TODO: пофиксить
+    fun getAllTasks(): MutableList<TaskItemDto> {
+        val tasks = mutableListOf<TaskItemDto>()
         val db = this.readableDatabase
         val cursor: Cursor = db.rawQuery("SELECT * FROM $TABLE_TASKS", null)
 
         if (cursor.moveToFirst()) {
             do {
-                val task = mutableMapOf<String, Any?>()
-                task[COLUMN_TASK_ID] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_ID))
-                task[COLUMN_USER_ID] = cursor.getInt(cursor.getColumnIndex(COLUMN_USER_ID))
-                task[COLUMN_TASK_TITLE] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE))
-                task[COLUMN_TASK_DESCRIPTION] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DESCRIPTION))
-                task[COLUMN_TASK_PRIORITY] = cursor.getInt(cursor.getColumnIndex(COLUMN_TASK_PRIORITY))
-                task[COLUMN_TASK_STATUS] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_STATUS))
-                task[COLUMN_TASK_START_DATE] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_START_DATE))
-                task[COLUMN_TASK_DUE_DATE] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DUE_DATE))
-                task[COLUMN_TASK_UPDATED_AT] = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UPDATED_AT))
+                val task = TaskItemDto(
+                    taskId = cursor.getLong(cursor.getColumnIndex(COLUMN_TASK_ID)),
+                    title = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE)),
+                    description = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DESCRIPTION)),
+                    status = TaskStatus.valueOf(
+                        cursor.getString(
+                            cursor.getColumnIndex(
+                                COLUMN_TASK_STATUS
+                            )
+                        )
+                    ),
+                    priority = when (cursor.getInt(cursor.getColumnIndex(COLUMN_TASK_PRIORITY))) {
+                        0 -> TaskPriority.LOW
+                        1 -> TaskPriority.MEDIUM
+                        2 -> TaskPriority.HIGH
+                        else -> TaskPriority.UNDEFINED
+                    },
+                    startDate = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_START_DATE)) ?: "",
+                    dueDate = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DUE_DATE)) ?: ""
+                )
 
                 tasks.add(task)
             } while (cursor.moveToNext())
         }
+
         cursor.close()
         db.close()
         return tasks
     }
 
+
     // Update
-    fun updateTask(id: String, userId: Int?, title: String?, description: String?, priority: Int?, status: String?, startDate: String?, endDate: String?) {
+    fun updateTask(
+        id: String,
+        userId: Int?,
+        title: String?,
+        description: String?,
+        priority: Int?,
+        status: String?,
+        startDate: String?,
+        endDate: String?
+    ) {
         val db = this.writableDatabase
         val values = ContentValues().apply {
             userId?.let { put(COLUMN_USER_ID, it) }

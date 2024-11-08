@@ -14,6 +14,6 @@ data class Task(
     val priority: TaskPriority,
     val status: TaskStatus,
     val startDate: LocalDate,
-    val endDate: LocalDate,
+    val dueDate: LocalDate,
     val updatedAt: LocalDateTime,
 )

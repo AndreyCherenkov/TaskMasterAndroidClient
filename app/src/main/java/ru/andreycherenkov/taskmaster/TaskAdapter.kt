@@ -38,16 +38,18 @@ class TaskAdapter(private val tasks: List<TaskItemDto>) : RecyclerView.Adapter<T
             LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
         }
 
-        holder.textViewDates.text = if (task.endDate.isBlank()) {
+        //todo исправить костыль с == "null". Костыль появился из-за проблем с сериализацией дат
+        holder.textViewDates.text = if (task.dueDate == "null" || task.dueDate.isBlank()) {
             "Дата создания: $startDate"
         } else {
-            "${task.startDate} - ${task.endDate}"
+            "${task.startDate} - ${task.dueDate}"
         }
 
         when (task.priority) {
             TaskPriority.HIGH -> holder.cardView.setCardBackgroundColor(Color.RED)
             TaskPriority.MEDIUM -> holder.cardView.setCardBackgroundColor(Color.YELLOW)
             TaskPriority.LOW -> holder.cardView.setCardBackgroundColor(Color.GREEN)
+            TaskPriority.UNDEFINED -> holder.cardView.setCardBackgroundColor(Color.YELLOW)
         }
     }
 

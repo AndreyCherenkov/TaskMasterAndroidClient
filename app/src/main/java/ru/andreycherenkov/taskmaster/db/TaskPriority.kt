@@ -1,9 +1,10 @@
 package ru.andreycherenkov.taskmaster.db
 
 enum class TaskPriority(val priority: String) {
-    LOW("low"),
-    MEDIUM("medium"),
-    HIGH("high");
+    LOW("LOW"),
+    MEDIUM("MEDIUM"),
+    HIGH("HIGH"),
+    UNDEFINED("UNDEFINED");
 
     companion object {
         fun fromString(value: String): TaskPriority {
