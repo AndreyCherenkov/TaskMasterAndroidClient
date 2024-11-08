@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">TaskMaster</string>
+    <string name="hint_task_title_ru">Название задачи</string>
+    <string name="date_format_ru">Дата старта (дд/мм/гггг)</string>
+    <string name="hint_data_choice_ru">Выберите дату старта</string>
+    <string name="hint_data_end_ru">Выберите дату окончания</string>
+    <string name="task_status_ru">Статус задачи</string>
+    <string name="task_priority_ru">Приоритет задачи</string>
+    <string name="hint_task_description_ru">Введите описание задачи</string>
+    <string name="end_data_text_ru">Дата окончания (дд/мм/гггг)</string>
+</resources>
