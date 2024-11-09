@@ -2,11 +2,8 @@ package ru.andreycherenkov.taskmaster
 
 import android.app.AlertDialog
 import android.app.DatePickerDialog
-import android.content.Context
+import android.content.Intent
 import android.icu.util.Calendar
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.ArrayAdapter
@@ -20,42 +17,35 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import ru.andreycherenkov.taskmaster.api.dto.TaskDtoCreateRequest
-import ru.andreycherenkov.taskmaster.api.dto.TaskDtoResponse
 import ru.andreycherenkov.taskmaster.db.TaskRepository
 import ru.andreycherenkov.taskmaster.api.dto.TaskItemDto
 import ru.andreycherenkov.taskmaster.db.Task
 import ru.andreycherenkov.taskmaster.db.TaskPriority
 import ru.andreycherenkov.taskmaster.db.TaskStatus
+import ru.andreycherenkov.taskmaster.network.TaskClient
 import java.time.LocalDate
 import java.util.UUID
-import java.util.logging.Level
-import java.util.logging.Logger
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TaskAdapter.OnTaskClickListener {
 
-    private val taskRepository = TaskRepository(this)
     private lateinit var taskList: MutableList<TaskItemDto>
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var recyclerView: RecyclerView
     private lateinit var navigationView: NavigationView
     private lateinit var taskAdapter: TaskAdapter
     private lateinit var createTaskButton: Button
+    private val taskRepository = TaskRepository(this)
+    private val taskClient = TaskClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         initViews()
 
+        taskClient.getAllTasks("1fd4c579-e0fd-4504-b82b-ed011cb06d14", taskRepository, this)
+        taskList = taskRepository.getAllTasks()
         setTaskAdapter()
-
         navigationView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_profile -> {}
@@ -71,6 +61,32 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    override fun onTaskLongClick(task: TaskItemDto) {
+        val localTask: Task? = task.taskUUID?.let { taskRepository.getTask(it) }
+        localTask?.let {
+            taskClient.deleteTask(localTask.taskUUID.toString(), taskRepository, this)
+            val position = taskList.indexOf(task)
+            taskList.remove(task)
+            taskAdapter.notifyItemRemoved(position)
+            taskAdapter.notifyDataSetChanged()
+        }
+    }
+
+    //todo добавить фабричный метод в EditTaskActivity
+    override fun onTaskClick(task: TaskItemDto) {
+        val intent = Intent(this, EditTaskActivity::class.java)
+
+//            intent.putExtra("TASK_ID", task.id) // передаем идентификатор задачи
+//            intent.putExtra("TASK_NAME", task.name) // передаем название задачи
+//            intent.putExtra("TASK_STATUS", task.status) // передаем статус задачи
+//            intent.putExtra("TASK_PRIORITY", task.priority) // передаем приоритет задачи
+//            intent.putExtra("TASK_START_DATE", task.startDate) // передаем дату начала
+//            intent.putExtra("TASK_END_DATE", task.endDate) // передаем дату конца
+//            intent.putExtra("TASK_DESCRIPTION", task.description) // передаем описание задачи
+
+        startActivity(intent)
+    }
+
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
             drawerLayout.closeDrawer(GravityCompat.END)
@@ -81,12 +97,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun setTaskAdapter() {
         recyclerView.layoutManager = LinearLayoutManager(this)
-        taskAdapter = TaskAdapter(taskList)
+        taskAdapter = TaskAdapter(taskList, this, this)
         recyclerView.adapter = taskAdapter
     }
 
     private fun initViews() {
-        taskList = taskRepository.getAllTasks()
         recyclerView = findViewById(R.id.recycler_view_tasks)
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.nav_view)
@@ -139,15 +154,15 @@ class MainActivity : AppCompatActivity() {
                 val taskPriority = TaskPriority.fromString(taskPriorityString)
                 val taskStatus = TaskStatus.fromString(taskStatusString)
 
-                val newTask = TaskItemDto(
-                    taskId = null,
-                    title = taskName,
-                    description = taskDescription,
-                    status = taskStatus,
-                    priority = taskPriority,
-                    startDate = startDate,
-                    dueDate = endDate
-                )
+//                val newTask = TaskItemDto(
+//                    taskId = null,
+//                    title = taskName,
+//                    description = taskDescription,
+//                    status = taskStatus,
+//                    priority = taskPriority,
+//                    startDate = startDate,
+//                    dueDate = endDate
+//                )
 
                 val test = TaskDtoCreateRequest(
                     userId = UUID.fromString("59564db6-6e3f-49d3-94b0-b3317f12b13e"),
@@ -160,7 +175,7 @@ class MainActivity : AppCompatActivity() {
 
                 Log.d("TaskStatus", "Selected status: '$taskPriority'")
 
-                addTask(test)
+//                addTask(test)
                 alertDialog.dismiss()
             }
         }
@@ -184,61 +199,6 @@ class MainActivity : AppCompatActivity() {
     private fun addTaskToList(task: TaskItemDto) {
         taskList.add(task)
         taskAdapter.notifyDataSetChanged()
-    }
-
-    private fun addTask(taskDtoCreateRequest: TaskDtoCreateRequest) {
-        if (isNetworkAvailable(this)) {
-            val taskApi = RetrofitClient.taskApi
-            taskApi.createTask(taskDtoCreateRequest).enqueue(object : Callback<TaskDtoResponse> {
-                override fun onResponse(
-                    call: Call<TaskDtoResponse>,
-                    response: Response<TaskDtoResponse>
-                ) {
-                    if (response.isSuccessful) {
-                        val createdTask = response.body()
-                        if (createdTask != null) {
-                            val id = taskRepository.addTask(createdTask)
-                            val taskItem = with(createdTask) {
-                                TaskItemDto(
-                                    taskId = id,
-                                    title = title,
-                                    description = description,
-                                    status = taskStatus,
-                                    priority = priority,
-                                    startDate = startDate,
-                                    dueDate = dueDate.toString()
-                                )
-                            }
-                            addTaskToList(taskItem)
-                        }
-                        Logger.getGlobal().log(Level.INFO, "RESPONSE SUCCESSFUL")
-                    }
-                }
-
-                override fun onFailure(call: Call<TaskDtoResponse>, t: Throwable) {
-                    Logger.getGlobal()
-                        .log(Level.INFO, "RESPONSE FAILED: ${t.message}")
-                }
-            })
-
-        } else {
-            println("No internet connection available.")
-        }
-
-    }
-
-    fun isNetworkAvailable(context: Context): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val networkCapabilities = connectivityManager.activeNetwork?.let {
-                connectivityManager.getNetworkCapabilities(it)
-            }
-            networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-        } else {
-            val activeNetworkInfo = connectivityManager.activeNetworkInfo
-            activeNetworkInfo != null && activeNetworkInfo.isConnected
-        }
     }
 
     private fun showDatePickerDialog(onDateSelected: (String) -> Unit) {

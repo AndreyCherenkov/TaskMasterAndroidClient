@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Редактирование задачи"
+        android:textSize="24sp"
+        android:layout_gravity="center"/>
+
+    <EditText
+        android:id="@+id/taskNameEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Название задачи"/>
+
+    <Spinner
+        android:id="@+id/taskStatusSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Spinner
+        android:id="@+id/taskPrioritySpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <EditText
+        android:id="@+id/startDateEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Дата начала"
+        android:focusable="false"/>
+
+    <EditText
+        android:id="@+id/endDateEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Дата конца"
+        android:focusable="false"/>
+
+    <EditText
+        android:id="@+id/taskDescriptionEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Описание задачи"
+        android:inputType="textMultiLine"/>
+
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Сохранить изменения"/>
+</LinearLayout>

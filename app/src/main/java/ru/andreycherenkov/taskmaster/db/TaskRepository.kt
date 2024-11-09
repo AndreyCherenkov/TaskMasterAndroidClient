@@ -8,7 +8,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import ru.andreycherenkov.taskmaster.api.dto.TaskDtoResponse
 import ru.andreycherenkov.taskmaster.api.dto.TaskItemDto
-import java.time.format.DateTimeFormatter
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 
 class TaskRepository(context: Context) :
@@ -58,23 +59,24 @@ class TaskRepository(context: Context) :
         val db = this.writableDatabase
 
         val values = ContentValues().apply {
+            put(COLUMN_TASK_UUID, taskDtoResponse.taskId.toString())
             put(COLUMN_USER_ID, taskDtoResponse.userId.toString()) // UUID пользователя
             put(COLUMN_TASK_TITLE, taskDtoResponse.title) // Заголовок задачи
-            put(COLUMN_TASK_DESCRIPTION, taskDtoResponse.description) // Описание задачи
+            put(COLUMN_TASK_DESCRIPTION, taskDtoResponse.description)
             put(
                 COLUMN_TASK_PRIORITY,
                 taskDtoResponse.priority.ordinal
-            ) // Приоритет задачи (предполагается, что это enum)
+            )
             put(
                 COLUMN_TASK_STATUS,
                 taskDtoResponse.taskStatus.name
-            ) // Статус задачи (предполагается, что это enum)
-            put(COLUMN_TASK_DUE_DATE, taskDtoResponse.dueDate?.toString()) // Срок выполнения задачи
-            put(COLUMN_TASK_START_DATE, taskDtoResponse.startDate.toString())
+            )
+            put(COLUMN_TASK_DUE_DATE, taskDtoResponse.dueDate)
+            put(COLUMN_TASK_START_DATE, taskDtoResponse.startDate)
             put(
                 COLUMN_TASK_UPDATED_AT,
-                System.currentTimeMillis().toString()
-            ) // Время обновления задачи
+                LocalDateTime.now().toString()
+            )
         }
 
         val id = db.insert(TABLE_TASKS, null, values)
@@ -84,10 +86,93 @@ class TaskRepository(context: Context) :
     }
 
 
-    // Read
-    fun getTask(id: String): Cursor? {
+    @SuppressLint("Range")
+    fun getTask(id: Long): Task? {
         val db = this.readableDatabase
-        return db.query(TABLE_TASKS, null, "$COLUMN_TASK_ID=?", arrayOf(id), null, null, null)
+        val cursor = db.query(
+            TABLE_TASKS,
+            null,
+            "$COLUMN_TASK_ID=?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        )
+
+        var task: Task? = null
+        if (cursor != null && cursor.moveToFirst()) {
+            val taskUUID = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UUID)))
+            val userId = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_USER_ID)))
+            val title = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE))
+            val description = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DESCRIPTION))
+            val priority = TaskPriority.values()[cursor.getInt(cursor.getColumnIndex(COLUMN_TASK_PRIORITY))]
+            val status = TaskStatus.valueOf(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_STATUS)))
+            val startDate = LocalDate.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_START_DATE)))
+            val dueDate = LocalDate.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DUE_DATE)))
+            val updatedAt = LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UPDATED_AT)))
+
+            task = Task(
+                id = id,
+                taskUUID = taskUUID,
+                userId = userId,
+                title = title,
+                description = description,
+                priority = priority,
+                status = status,
+                startDate = startDate.toString(),
+                dueDate = dueDate.toString(),
+                updatedAt = updatedAt.toString()
+            )
+        }
+
+        cursor?.close()
+        return task
+    }
+
+
+    @SuppressLint("Range")
+    fun getTask(id: UUID?): Task? {
+        val db = this.readableDatabase
+        val cursor = db.query(
+            TABLE_TASKS,
+            null,
+            "$COLUMN_TASK_UUID=?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        )
+
+        return if (cursor != null && cursor.moveToFirst()) {
+            val taskId = cursor.getLong(cursor.getColumnIndex(COLUMN_TASK_ID))
+            val taskUUID = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UUID)))
+            val userId = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_USER_ID)))
+            val title = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE))
+            val description = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DESCRIPTION))
+            val priority = TaskPriority.entries[cursor.getInt(cursor.getColumnIndex(COLUMN_TASK_PRIORITY))]
+            val status = TaskStatus.valueOf(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_STATUS)))
+            val startDate = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_START_DATE))
+            val dueDate = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DUE_DATE))
+            val updatedAt = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UPDATED_AT))
+
+            Task(
+                id = taskId,
+                taskUUID = taskUUID,
+                userId = userId,
+                title = title,
+                description = description,
+                priority = priority,
+                status = status,
+                startDate = startDate.toString(),
+                dueDate = dueDate?.toString(),
+                updatedAt = updatedAt.toString()
+            ).also {
+                cursor.close()
+            }
+        } else {
+            cursor?.close()
+            null
+        }
     }
 
     @SuppressLint("Range") // TODO: пофиксить
@@ -100,6 +185,7 @@ class TaskRepository(context: Context) :
             do {
                 val task = TaskItemDto(
                     taskId = cursor.getLong(cursor.getColumnIndex(COLUMN_TASK_ID)),
+                    taskUUID = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UUID))),
                     title = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE)),
                     description = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DESCRIPTION)),
                     status = TaskStatus.valueOf(
@@ -128,38 +214,27 @@ class TaskRepository(context: Context) :
         return tasks
     }
 
-
-    // Update
-    fun updateTask(
-        id: String,
-        userId: Int?,
-        title: String?,
-        description: String?,
-        priority: Int?,
-        status: String?,
-        startDate: String?,
-        endDate: String?
-    ) {
+    fun updateTask(taskDto: TaskDtoResponse) {
         val db = this.writableDatabase
         val values = ContentValues().apply {
-            userId?.let { put(COLUMN_USER_ID, it) }
-            title?.let { put(COLUMN_TASK_TITLE, it) }
-            description?.let { put(COLUMN_TASK_DESCRIPTION, it) }
-            priority?.let { put(COLUMN_TASK_PRIORITY, it) }
-            status?.let { put(COLUMN_TASK_STATUS, it) }
-            startDate?.let { put(COLUMN_TASK_START_DATE, it) }
-            endDate?.let { put(COLUMN_TASK_DUE_DATE, it) }
+            put(COLUMN_USER_ID, taskDto.userId.toString())
+            put(COLUMN_TASK_TITLE, taskDto.title)
+            put(COLUMN_TASK_DESCRIPTION, taskDto.description)
+            put(COLUMN_TASK_PRIORITY, taskDto.priority.ordinal)
+            put(COLUMN_TASK_STATUS, taskDto.taskStatus.name)
+            put(COLUMN_TASK_START_DATE, taskDto.startDate)
+            taskDto.dueDate?.let { put(COLUMN_TASK_DUE_DATE, it) }
             put(COLUMN_TASK_UPDATED_AT, System.currentTimeMillis().toString())
         }
 
-        db.update(TABLE_TASKS, values, "$COLUMN_TASK_ID=?", arrayOf(id))
+        db.update(TABLE_TASKS, values, "$COLUMN_TASK_UUID=?", arrayOf(taskDto.taskId.toString()))
         db.close()
     }
 
     // Delete
     fun deleteTask(id: String) {
-        val db = this.writableDatabase
-        db.delete(TABLE_TASKS, "$COLUMN_TASK_ID=?", arrayOf(id))
+        val db = writableDatabase
+        db.delete(TABLE_TASKS, "$COLUMN_TASK_UUID=?", arrayOf(id))
         db.close()
     }
 }

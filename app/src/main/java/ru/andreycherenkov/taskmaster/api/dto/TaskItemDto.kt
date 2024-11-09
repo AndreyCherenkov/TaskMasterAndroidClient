@@ -2,9 +2,11 @@ package ru.andreycherenkov.taskmaster.api.dto
 
 import ru.andreycherenkov.taskmaster.db.TaskPriority
 import ru.andreycherenkov.taskmaster.db.TaskStatus
+import java.util.UUID
 
 data class TaskItemDto(
-    val taskId: Long?,
+    val taskId: Long,
+    val taskUUID: UUID?,
     val title: String,
     val description: String,
     val status: TaskStatus,

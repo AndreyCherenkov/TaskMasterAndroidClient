@@ -12,7 +12,9 @@ import ru.andreycherenkov.taskmaster.db.TaskPriority
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class TaskAdapter(private val tasks: List<TaskItemDto>) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
+class TaskAdapter(private val tasks: List<TaskItemDto>,
+                  private val onTaskClick: OnTaskClickListener,
+                  private val onTaskLongClick: OnTaskClickListener) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
     inner class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val cardView: CardView = itemView.findViewById(R.id.cardView)
@@ -20,6 +22,25 @@ class TaskAdapter(private val tasks: List<TaskItemDto>) : RecyclerView.Adapter<T
         val textViewDescription: TextView = itemView.findViewById(R.id.textViewDescription)
         val textViewStatus: TextView = itemView.findViewById(R.id.textViewStatus)
         val textViewDates: TextView = itemView.findViewById(R.id.textViewDates)
+
+
+
+        init {
+
+            itemView.setOnClickListener {
+                onTaskClick.onTaskClick(tasks[adapterPosition])
+            }
+
+            itemView.setOnLongClickListener {
+                onTaskLongClick.onTaskLongClick(tasks[adapterPosition])
+                true
+            }
+        }
+    }
+
+    interface OnTaskClickListener {
+        fun onTaskLongClick(task: TaskItemDto)
+        fun onTaskClick(task: TaskItemDto)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
