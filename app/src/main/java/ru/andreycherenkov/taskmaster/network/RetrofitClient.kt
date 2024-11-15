@@ -1,4 +1,4 @@
-package ru.andreycherenkov.taskmaster
+package ru.andreycherenkov.taskmaster.network
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -15,6 +15,7 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
+
 
     val taskApi: TaskApi by lazy {
         retrofit.create(TaskApi::class.java)

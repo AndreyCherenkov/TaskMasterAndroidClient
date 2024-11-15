@@ -6,4 +6,10 @@
     <item
         android:id="@+id/nav_register"
         android:title="Создать аккаунт"/>
+    <item
+        android:id="@+id/nav_login"
+        android:title="Войти"/>
+    <item
+        android:id="@+id/nav_logout"
+        android:title="Выйти"/>
 </menu>

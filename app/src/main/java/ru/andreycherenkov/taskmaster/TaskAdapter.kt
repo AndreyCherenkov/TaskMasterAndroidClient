@@ -11,10 +11,13 @@ import ru.andreycherenkov.taskmaster.api.dto.TaskItemDto
 import ru.andreycherenkov.taskmaster.db.TaskPriority
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
-class TaskAdapter(private val tasks: List<TaskItemDto>,
-                  private val onTaskClick: OnTaskClickListener,
-                  private val onTaskLongClick: OnTaskClickListener) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
+class TaskAdapter(
+    private var tasks: MutableList<TaskItemDto>,
+    private val onTaskClick: OnTaskClickListener,
+    private val onTaskLongClick: OnTaskClickListener
+) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
     inner class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val cardView: CardView = itemView.findViewById(R.id.cardView)
@@ -23,10 +26,7 @@ class TaskAdapter(private val tasks: List<TaskItemDto>,
         val textViewStatus: TextView = itemView.findViewById(R.id.textViewStatus)
         val textViewDates: TextView = itemView.findViewById(R.id.textViewDates)
 
-
-
         init {
-
             itemView.setOnClickListener {
                 onTaskClick.onTaskClick(tasks[adapterPosition])
             }
@@ -77,6 +77,29 @@ class TaskAdapter(private val tasks: List<TaskItemDto>,
     override fun getItemCount(): Int {
         return tasks.size
     }
+
+    fun updateTasks(newTasks: List<TaskItemDto>) {
+        tasks.clear()
+        tasks.addAll(newTasks)
+        notifyDataSetChanged()
+    }
+
+    fun addTask(task: TaskItemDto) {
+        tasks.add(task)
+        notifyItemInserted(tasks.size - 1)
+    }
+
+    fun removeTask(taskUUID: UUID) {
+        val remove = tasks.stream()
+            .filter { t -> t.taskUUID == taskUUID }
+            .findFirst()
+        val position = tasks.indexOf(remove.get())
+        if (position != -1) {
+            tasks.removeAt(position)
+            notifyItemRemoved(position)
+        }
+    }
 }
+
 
 

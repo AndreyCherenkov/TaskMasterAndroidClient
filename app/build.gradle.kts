@@ -44,7 +44,14 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation (libs.retrofit)
     implementation (libs.converter.gson)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.swiperefreshlayout)
+
+    runtimeOnly(libs.kotlinx.coroutines.core)
+    runtimeOnly("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+
     testImplementation(libs.junit)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

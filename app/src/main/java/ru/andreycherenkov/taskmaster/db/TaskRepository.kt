@@ -35,7 +35,6 @@ class TaskRepository(context: Context) :
     override fun onCreate(db: SQLiteDatabase?) {
         val createTableQuery = """
             CREATE TABLE $TABLE_TASKS (
-                $COLUMN_TASK_ID LONG PRIMARY KEY,
                 $COLUMN_TASK_UUID TEXT,
                 $COLUMN_USER_ID INTEGER,
                 $COLUMN_TASK_TITLE TEXT NOT NULL,
@@ -55,13 +54,13 @@ class TaskRepository(context: Context) :
         onCreate(db)
     }
 
-    fun addTask(taskDtoResponse: TaskDtoResponse): Long {
+    fun addTask(taskDtoResponse: TaskDtoResponse) {
         val db = this.writableDatabase
 
         val values = ContentValues().apply {
             put(COLUMN_TASK_UUID, taskDtoResponse.taskId.toString())
-            put(COLUMN_USER_ID, taskDtoResponse.userId.toString()) // UUID пользователя
-            put(COLUMN_TASK_TITLE, taskDtoResponse.title) // Заголовок задачи
+            put(COLUMN_USER_ID, taskDtoResponse.userId.toString())
+            put(COLUMN_TASK_TITLE, taskDtoResponse.title)
             put(COLUMN_TASK_DESCRIPTION, taskDtoResponse.description)
             put(
                 COLUMN_TASK_PRIORITY,
@@ -75,14 +74,12 @@ class TaskRepository(context: Context) :
             put(COLUMN_TASK_START_DATE, taskDtoResponse.startDate)
             put(
                 COLUMN_TASK_UPDATED_AT,
-                LocalDateTime.now().toString()
+                LocalDate.now().toString()
             )
         }
 
-        val id = db.insert(TABLE_TASKS, null, values)
-
+        db.insert(TABLE_TASKS, null, values)
         db.close()
-        return id
     }
 
 
@@ -109,10 +106,9 @@ class TaskRepository(context: Context) :
             val status = TaskStatus.valueOf(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_STATUS)))
             val startDate = LocalDate.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_START_DATE)))
             val dueDate = LocalDate.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DUE_DATE)))
-            val updatedAt = LocalDateTime.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UPDATED_AT)))
+            val updatedAt = LocalDate.parse(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UPDATED_AT)))
 
             task = Task(
-                id = id,
                 taskUUID = taskUUID,
                 userId = userId,
                 title = title,
@@ -144,7 +140,6 @@ class TaskRepository(context: Context) :
         )
 
         return if (cursor != null && cursor.moveToFirst()) {
-            val taskId = cursor.getLong(cursor.getColumnIndex(COLUMN_TASK_ID))
             val taskUUID = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UUID)))
             val userId = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_USER_ID)))
             val title = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE))
@@ -156,14 +151,13 @@ class TaskRepository(context: Context) :
             val updatedAt = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UPDATED_AT))
 
             Task(
-                id = taskId,
                 taskUUID = taskUUID,
                 userId = userId,
                 title = title,
                 description = description,
                 priority = priority,
                 status = status,
-                startDate = startDate.toString(),
+                startDate = startDate?.toString(),
                 dueDate = dueDate?.toString(),
                 updatedAt = updatedAt.toString()
             ).also {
@@ -184,7 +178,6 @@ class TaskRepository(context: Context) :
         if (cursor.moveToFirst()) {
             do {
                 val task = TaskItemDto(
-                    taskId = cursor.getLong(cursor.getColumnIndex(COLUMN_TASK_ID)),
                     taskUUID = UUID.fromString(cursor.getString(cursor.getColumnIndex(COLUMN_TASK_UUID))),
                     title = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_TITLE)),
                     description = cursor.getString(cursor.getColumnIndex(COLUMN_TASK_DESCRIPTION)),
