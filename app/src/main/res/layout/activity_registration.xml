@@ -10,32 +10,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Логин" />
+        android:hint="@string/username_text_ru" />
 
     <EditText
         android:id="@+id/password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Пароль"
+        android:hint="@string/password_text_ru"
         android:inputType="textPassword" />
 
     <EditText
         android:id="@+id/confirm_password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Подтверждение пароля"
+        android:hint="@string/confirmation_pwd_text_ru"
         android:inputType="textPassword" />
 
     <EditText
         android:id="@+id/email"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Электронная почта"
+        android:hint="@string/email_text_ru"
         android:inputType="textEmailAddress" />
 
     <Button
         android:id="@+id/register_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Зарегистрироваться" />
+        android:text="@string/register_text_ru" />
 </LinearLayout>

@@ -8,4 +8,12 @@
     <string name="task_priority_ru">Приоритет задачи</string>
     <string name="hint_task_description_ru">Введите описание задачи</string>
     <string name="end_data_text_ru">Дата окончания (дд/мм/гггг)</string>
+    <string name="username_text_ru">Логин</string>
+    <string name="password_text_ru">Пароль</string>
+    <string name="login_text_ru">Войти</string>
+    <string name="create_task_ru">Создать задачу</string>
+    <string name="confirmation_pwd_text_ru">Подтверждение пароля</string>
+    <string name="email_text_ru">Электронная почта</string>
+    <string name="register_text_ru">Зарегистрироваться</string>
+
 </resources>
